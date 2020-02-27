@@ -1,4 +1,5 @@
 (function ($) {
+    var jcrop_api;
     $.fn.cropper = function (options, width, height) {
         var $widget = $(this).closest('.cropper-widget'),
             $progress = $widget.find('.progress'),
@@ -6,11 +7,11 @@
                 $widget: $widget,
                 $progress: $progress,
                 $progress_bar: $progress.find('.progress-bar'),
-                $thumbnail: $widget.find('.thumbnail'),
+                $thumbnail: $('.preview-photo'),
                 $photo_field: $widget.find('.photo-field'),
-                $upload_new_photo: $widget.find('.upload-new-photo'),
-                $new_photo_area: $widget.find('.new-photo-area'),
-                $cropper_label: $widget.find('.cropper-label'),
+                $upload_new_photo: $('.cropper-photo-toggle-modal'),
+                $new_photo_area: $('.upload-photo-area'),
+                $cropper_label: $('.new-cropper-label'),
                 $cropper_buttons: $widget.find('.cropper-buttons'),
                 $width_input: $widget.find('.width-input'),
                 $height_input: $widget.find('.height-input'),
@@ -25,25 +26,21 @@
                         cropper.$new_photo_area.append('<img src="' + e.target.result + '">');
                         cropper.$img = cropper.$new_photo_area.find('img');
 
-                        var image = new Image();
-                        image.src = e.target.result;
+                        var x1 = (cropper.$img.width() - width) / 2;
+                        var y1 = (cropper.$img.height() - height) / 2;
+                        var x2 = x1 + width;
+                        var y2 = y1 + height;
 
-                        image.onload = function() {
-                            var x1 = (this.width - width) / 2;
-                            var y1 = (this.height - height) / 2;
-                            var x2 = x1 + width;
-                            var y2 = y1 + height;
-                            var aspectRatio = (options.aspectRatio !== null && typeof options.aspectRatio !== 'undefined') ? options.aspectRatio : width / height;
-
-                            cropper.$img.Jcrop({
-                                aspectRatio: aspectRatio,
-                                setSelect: [x1, y1, x2, y2],
-                                boxWidth: cropper.$new_photo_area.width(),
-                                boxHeight: cropper.$new_photo_area.height(),
-                                keySupport: false
-                            });
-                        };
-
+                        cropper.$img.Jcrop({
+                            aspectRatio: width / height,
+                            setSelect: [x1, y1, x2, y2],
+                            boxWidth: cropper.$new_photo_area.width(),
+                            boxHeight: cropper.$new_photo_area.height(),
+                            keySupport: false
+                        },function () {
+                            jcrop_api = this;
+                        });
+                        console.log(jcrop_api)
                         cropper.setProgress(0);
                     };
 
@@ -61,7 +58,14 @@
                                 cropper.selectedFile = null;
                                 cropper.uploader._queue = [];
                             }
-                            return true;
+                            $('.cropper-photo-modal .modal').modal('show');
+                            setTimeout(() => {
+                                $('.upload-photo-modal .modal.in').modal('hide');
+                                const roundModal = document.querySelector('.jcrop-tracker');
+                                return true;
+                            }, 300);
+                            // $('.upload-photo-modal .modal.in').modal('hide');
+                            // return true;
                         },
                         onSubmit: function () {
                             if (cropper.selectedFile) {
@@ -100,30 +104,6 @@
                     }, options);
 
                     cropper.uploader = new ss.SimpleUpload(settings);
-
-                    cropper.$widget
-                        .on('click', '.delete-photo', function () {
-                            cropper.deletePhoto();
-                        })
-                        .on('click', '.crop-photo', function () {
-                            var data = cropper.$img.data('Jcrop').tellSelect();
-                            data[yii.getCsrfParam()] = yii.getCsrfToken();
-                            data['width'] = cropper.$width_input.val();
-                            data['height'] = cropper.$height_input.val();
-
-                            if (cropper.uploader._queue.length) {
-                                cropper.selectedFile = cropper.uploader._queue[0];
-                            } else {
-                                cropper.uploader._queue[0] = cropper.selectedFile;
-                            }
-                            cropper.uploader.setData(data);
-
-                            cropper.setProgress(1);
-                            cropper.uploader.setProgressBar(cropper.$progress_bar);
-
-                            cropper.readyForSubmit = true;
-                            cropper.uploader.submit();
-                        });
                 },
                 showError: function (error) {
                     if (error == '') {
@@ -145,7 +125,7 @@
                 },
                 deletePhoto: function () {
                     cropper.$photo_field.val('');
-                    cropper.$thumbnail.attr({'src': cropper.$thumbnail.data('no-photo')});
+                    cropper.$thumbnail[0].removeAttribute('src', );
                 },
                 clearOldImg: function () {
                     if (cropper.$img) {
@@ -155,6 +135,32 @@
                     }
                 }
             };
+
+        $('.crop-photo-btn').on('click', function () {
+            $('.jcrop-thumbnail').removeClass('hide');
+            $('.cropper-photo-modal .modal').modal('hide');
+            var data = cropper.$img.data('Jcrop').tellSelect();
+            data[yii.getCsrfParam()] = yii.getCsrfToken();
+            data['width'] = cropper.$width_input.val();
+            data['height'] = cropper.$height_input.val();
+            if (cropper.uploader._queue.length) {
+                cropper.selectedFile = cropper.uploader._queue[0];
+            } else {
+                cropper.uploader._queue[0] = cropper.selectedFile;
+            }
+            cropper.uploader.setData(data);
+
+            cropper.setProgress(1);
+            cropper.uploader.setProgressBar(cropper.$progress_bar);
+
+            cropper.readyForSubmit = true;
+            cropper.uploader.submit();
+        });
+
+        $('.delete-photo-toggle').on('click', function (e) {
+            e.preventDefault();
+            cropper.deletePhoto();
+        });
 
         cropper.init();
     };
