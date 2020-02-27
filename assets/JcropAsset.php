@@ -15,4 +15,8 @@ class JcropAsset extends AssetBundle
     public $css = [
         'css/jquery.Jcrop.min.css'
     ];
+
+    public $publishOptions = [
+        'forceCopy' => true,
+    ];
 }
